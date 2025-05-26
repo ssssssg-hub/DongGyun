@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>💘 유빈♥동균 연애 시뮬레이션 💘</title>
-    <!-- <link rel="stylesheet" href="style.css" /> -->
     <style>
       * {
         margin: 0;
@@ -247,7 +246,7 @@
         <div id="choices"></div>
       </div>
     </div>
-    <!-- <script src="game.js"></script> -->
+
     <script>
       class DatingSimulator {
         constructor() {
@@ -475,6 +474,9 @@
           const buttons = document.querySelectorAll(".choice-btn");
           buttons.forEach((btn) => (btn.disabled = true));
 
+          // Show choice feedback
+          this.showChoiceFeedback(choice);
+
           setTimeout(() => {
             this.affection += choice.affection;
             this.affection = Math.max(0, Math.min(100, this.affection));
@@ -490,12 +492,125 @@
             this.day++;
             this.updateUI();
 
+            // Check for max affection confession
+            if (this.affection >= 100 && !this.specialFlags.hasConfession) {
+              this.showMaxAffectionConfession();
+              return;
+            }
+
             if (this.mistakes >= 3 || this.affection <= 0) {
               this.endGame();
             } else {
               this.showCurrentEvent();
             }
-          }, 500);
+          }, 1500);
+        }
+
+        showChoiceFeedback(choice) {
+          const eventText = document.getElementById("event-text");
+          const originalText = eventText.textContent;
+
+          let feedbackText = "";
+          let feedbackColor = "";
+
+          if (choice.affection > 10) {
+            feedbackText = "💖 유빈이가 정말 좋아해요! +" + choice.affection;
+            feedbackColor = "#ff1744";
+          } else if (choice.affection > 5) {
+            feedbackText =
+              "😊 유빈이의 기분이 좋아졌어요! +" + choice.affection;
+            feedbackColor = "#ff6b6b";
+          } else if (choice.affection > 0) {
+            feedbackText = "🙂 괜찮은 선택이에요. +" + choice.affection;
+            feedbackColor = "#4CAF50";
+          } else if (choice.affection < -5) {
+            feedbackText = "😞 유빈이가 많이 실망했어요... " + choice.affection;
+            feedbackColor = "#f44336";
+          } else {
+            feedbackText = "😐 유빈이가 조금 아쉬워해요. " + choice.affection;
+            feedbackColor = "#ff9800";
+          }
+
+          eventText.innerHTML = `
+                    <div style="color: ${feedbackColor}; font-weight: bold; text-align: center; font-size: 1.3rem; padding: 1rem;">
+                        ${feedbackText}
+                    </div>
+                `;
+
+          setTimeout(() => {
+            eventText.textContent = originalText;
+          }, 1200);
+        }
+
+        showMaxAffectionConfession() {
+          const eventText = document.getElementById("event-text");
+          const choices = document.getElementById("choices");
+
+          eventText.innerHTML = `
+                    <div style="background: linear-gradient(135deg, #ffe6e6, #ffd6cc); padding: 2rem; border-radius: 15px; text-align: center;">
+                        <div style="font-size: 1.5rem; margin-bottom: 1rem;">💕✨ 특별한 순간 ✨💕</div>
+                        <div style="font-size: 1.2rem; line-height: 1.8; color: #333;">
+                            "동균아... 너랑 함께 있으면 너무 행복해. 
+                            나... 너를 정말 좋아해. 나랑 사귈래?"<br><br>
+                            <em style="color: #ff6b6b;">유빈이가 용기를 내어 먼저 고백했어요!</em>
+                        </div>
+                    </div>
+                `;
+
+          choices.innerHTML = "";
+
+          const confessionChoices = [
+            {
+              text: "💖 '나도 너를 좋아해! 물론이야!'",
+              affection: 25,
+              flag: "hasConfession",
+              ending: "perfect",
+            },
+            {
+              text: "🤗 '고마워... 나도 같은 마음이었어'",
+              affection: 20,
+              flag: "hasConfession",
+              ending: "sweet",
+            },
+            {
+              text: "😅 '좀 더 천천히 생각해볼까?'",
+              affection: -15,
+              ending: "friend_zone",
+            },
+            {
+              text: "😰 '미안... 나는 아직...'",
+              affection: -25,
+              ending: "rejection",
+            },
+          ];
+
+          confessionChoices.forEach((choice, index) => {
+            const button = document.createElement("button");
+            button.className = "choice-btn";
+            button.style.fontSize = "1.1rem";
+            button.style.padding = "1.5rem";
+            button.textContent = `${index + 1}. ${choice.text}`;
+            button.onclick = () => this.handleConfessionChoice(choice);
+            choices.appendChild(button);
+          });
+        }
+
+        handleConfessionChoice(choice) {
+          const buttons = document.querySelectorAll(".choice-btn");
+          buttons.forEach((btn) => (btn.disabled = true));
+
+          this.affection += choice.affection;
+          this.affection = Math.max(0, Math.min(100, this.affection));
+
+          if (choice.flag) {
+            this.specialFlags[choice.flag] = true;
+          }
+
+          this.specialFlags.confessionEnding = choice.ending;
+
+          setTimeout(() => {
+            this.endGame();
+          }, 1000);
         }
 
         endGame() {
@@ -504,52 +619,136 @@
 
           let endingMessage = "";
           let endingEmoji = "";
+          let endingTitle = "";
 
-          if (this.mistakes >= 3) {
+          // Special confession endings
+          if (this.specialFlags.confessionEnding) {
+            switch (this.specialFlags.confessionEnding) {
+              case "perfect":
+                endingTitle = "💕 완벽한 사랑 엔딩 💕";
+                endingMessage =
+                  "두 사람이 서로의 마음을 확인하고 완벽한 커플이 되었어요! 앞으로도 행복하게 지내세요! 💖";
+                endingEmoji = "🌟";
+                break;
+              case "sweet":
+                endingTitle = "💝 달콤한 연인 엔딩 💝";
+                endingMessage =
+                  "조금 수줍지만 진실한 마음이 통했어요. 두 사람의 사랑이 시작되었네요!";
+                endingEmoji = "💕";
+                break;
+              case "friend_zone":
+                endingTitle = "😅 친구존 엔딩 😅";
+                endingMessage =
+                  "아직은 친구로 남기로 했지만, 언젠가 다시 기회가 올지도 모르네요...";
+                endingEmoji = "🤝";
+                break;
+              case "rejection":
+                endingTitle = "💔 거절 엔딩 💔";
+                endingMessage =
+                  "유빈이의 용기있는 고백을 거절했어요. 하지만 좋은 추억으로 남을 거예요.";
+                endingEmoji = "😢";
+                break;
+            }
+          }
+          // Regular endings
+          else if (this.mistakes >= 3) {
+            endingTitle = "❌ 실패 엔딩 ❌";
             endingMessage =
               "실수를 너무 많이 해서 유빈이가 실망했어요... 다음엔 더 신중하게 행동해보세요!";
-            endingEmoji = "❌";
+            endingEmoji = "😔";
           } else if (this.affection <= 0) {
+            endingTitle = "💔 이별 엔딩 💔";
             endingMessage =
               "호감도가 0이 되어 유빈이가 떠났어요... 상대방의 마음도 생각해보세요.";
-            endingEmoji = "💔";
+            endingEmoji = "😭";
           } else if (this.affection >= 90 && this.specialFlags.hasConfession) {
+            endingTitle = "👑 완벽한 엔딩 👑";
             endingMessage =
-              "완벽한 엔딩! 유빈이와 행복한 연애를 시작했어요! 두 사람의 미래가 기대되네요!";
-            endingEmoji = "💖";
+              "모든 선택을 완벽하게 하여 최고의 결과를 얻었어요! 두 사람의 미래가 기대되네요!";
+            endingEmoji = "🏆";
           } else if (this.affection >= 80) {
+            endingTitle = "💕 좋은 엔딩 💕";
             endingMessage =
-              "좋은 엔딩! 유빈이와의 관계가 더욱 깊어졌어요! 앞으로도 서로를 아끼세요.";
-            endingEmoji = "💕";
+              "유빈이와의 관계가 더욱 깊어졌어요! 앞으로도 서로를 아끼며 지내세요.";
+            endingEmoji = "😊";
           } else if (this.affection >= 60) {
+            endingTitle = "💝 평범한 엔딩 💝";
             endingMessage =
-              "평범한 엔딩! 유빈이와 좋은 친구로 남았어요. 우정도 소중한 관계랍니다.";
-            endingEmoji = "💝";
+              "유빈이와 좋은 친구로 남았어요. 우정도 소중한 관계랍니다.";
+            endingEmoji = "🙂";
           } else {
+            endingTitle = "😢 아쉬운 엔딩 😢";
             endingMessage =
-              "아쉬운 엔딩... 유빈이와의 관계가 소원해졌어요. 다시 시도해보세요!";
-            endingEmoji = "😢";
+              "유빈이와의 관계가 소원해졌어요. 다시 시도해보세요!";
+            endingEmoji = "😞";
           }
 
-          eventText.innerHTML = `
-          <div class="ending-container">
-              <div class="ending-text">${endingEmoji} ${endingMessage}</div>
-              <div style="margin: 1rem 0; font-size: 1.1rem;">
-                  최종 호감도: ${this.affection}/100<br>
-                  실수 횟수: ${this.mistakes}/3<br>
-                  진행한 날: ${this.day - 1}일
-              </div>
-          </div>
-      `;
+          // Calculate special achievements
+          let achievements = [];
+          if (this.specialFlags.hasGift) achievements.push("🎁 선물 마스터");
+          if (this.specialFlags.hasDate) achievements.push("🍽️ 데이트 플래너");
+          if (this.specialFlags.hasMovie) achievements.push("🎬 영화 러버");
+          if (this.specialFlags.hasTravel) achievements.push("✈️ 여행 메이트");
+          if (this.specialFlags.hasConfession)
+            achievements.push("💖 고백 성공");
+          if (this.mistakes === 0) achievements.push("⭐ 완벽주의자");
+          if (this.affection === 100) achievements.push("💯 호감도 만점");
 
-          choices.innerHTML =
-            '<button class="restart-btn" onclick="location.reload()">🔄 다시 시작하기</button>';
+          eventText.innerHTML = `
+                    <div class="ending-container">
+                        <div class="ending-text">${endingEmoji} ${endingTitle}</div>
+                        <div style="margin: 1.5rem 0; font-size: 1.1rem; line-height: 1.6;">
+                            ${endingMessage}
+                        </div>
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; margin: 1rem 0; border-left: 4px solid #ff6b6b;">
+                            <strong>📊 최종 결과</strong><br>
+                            최종 호감도: <span style="color: #ff6b6b; font-weight: bold;">${
+                              this.affection
+                            }/100</span><br>
+                            실수 횟수: <span style="color: #666; font-weight: bold;">${
+                              this.mistakes
+                            }/3</span><br>
+                            진행한 날: <span style="color: #4CAF50; font-weight: bold;">${
+                              this.day - 1
+                            }일</span>
+                        </div>
+                        ${
+                          achievements.length > 0
+                            ? `
+                        <div style="background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
+                            <strong style="color: #ff8f00;">🏅 획득한 업적</strong><br>
+                            <div style="margin-top: 0.5rem;">
+                                ${achievements.join(" • ")}
+                            </div>
+                        </div>
+                        `
+                            : ""
+                        }
+                    </div>
+                `;
+
+          choices.innerHTML = `
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                        <button class="restart-btn" onclick="location.reload()">🔄 다시 시작하기</button>
+                        <button class="restart-btn" onclick="window.gameInstance.showStats()" style="background: linear-gradient(135deg, #2196F3, #1976D2);">📈 통계 보기</button>
+                    </div>
+                `;
+        }
+
+        showStats() {
+          alert(
+            `🎮 게임 통계\n\n총 ${this.day - 1}일 진행\n최고 호감도: ${
+              this.affection
+            }\n실수 횟수: ${this.mistakes}\n특별 이벤트: ${
+              Object.values(this.specialFlags).filter((v) => v === true).length
+            }개 달성`
+          );
         }
       }
 
       // 게임 시작
       window.onload = () => {
-        new DatingSimulator();
+        window.gameInstance = new DatingSimulator();
       };
     </script>
   </body>
